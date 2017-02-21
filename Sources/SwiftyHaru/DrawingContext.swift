@@ -9,6 +9,8 @@
 import CLibHaru
 import Foundation
 
+
+
 public final class DrawingContext {
     
     private weak var _document: PDFDocument?
