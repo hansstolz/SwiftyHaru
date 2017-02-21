@@ -9,8 +9,6 @@
 import CLibHaru
 import Foundation
 
-
-
 public final class DrawingContext {
     
     private weak var _document: PDFDocument?
@@ -59,12 +57,13 @@ public final class DrawingContext {
     
     // MARK: - Graphics state
     
-    /// The current line width for path painting of the page. Default value is 1.
+    /// The current line width for path painting of the page. Must be nonegative. Default value is 1.
     public var lineWidth: Float {
         get {
             return HPDF_Page_GetLineWidth(_page)
         }
         set {
+            guard newValue >= 0 else { return }
             HPDF_Page_SetLineWidth(_page, newValue)
         }
     }
@@ -232,7 +231,11 @@ public final class DrawingContext {
             }
         }
         
-        assert(path.currentPosition == Point(HPDF_Page_GetCurrentPos(_page)))
+        assert(path.currentPosition.x - HPDF_Page_GetCurrentPos(_page).x < 0.001 &&
+            path.currentPosition.y - HPDF_Page_GetCurrentPos(_page).y < 0.001,
+               "The value of property `currentPosition` (\(path.currentPosition)) is not equal to " +
+                "the value returned from the function " +
+            "`HPDF_Page_GetCurrentPos` (\(HPDF_Page_GetCurrentPos(_page)))")
         
         HPDF_Page_MoveTo(_page, 0, 0)
     }
@@ -328,9 +331,7 @@ public final class DrawingContext {
             return Font(name: String(cString: HPDF_Font_GetFontName(fontHandle)))
         }
         set {
-            //let font = HPDF_GetFont(_documentHandle, newValue.name, encoding.name)
-            print(newValue.name)
-            let font = HPDF_GetFont(_documentHandle, newValue.name, "UTF-8")
+            let font = HPDF_GetFont(_documentHandle, newValue.name, encoding.name)
             
             HPDF_Page_SetFontAndSize(_page, font, fontSize)
         }
@@ -350,8 +351,7 @@ public final class DrawingContext {
         set {
             guard newValue > 0 && newValue < maximumFontSize else { return }
             
-            //let font = HPDF_GetFont(_documentHandle, self.font.name, encoding.name)
-            let font = HPDF_GetFont(_documentHandle, self.font.name, "UTF-8")
+            let font = HPDF_GetFont(_documentHandle, self.font.name, encoding.name)
             
             HPDF_Page_SetFontAndSize(_page, font, newValue)
         }
@@ -367,8 +367,7 @@ public final class DrawingContext {
         set {
             _enableMultibyteEncoding(for: newValue)
             
-            //let font = HPDF_GetFont(_documentHandle, self.font.name, newValue.name)
-            let font = HPDF_GetFont(_documentHandle, self.font.name, "UTF-8")
+            let font = HPDF_GetFont(_documentHandle, self.font.name, newValue.name)
             
             if let font = font {
                 HPDF_Page_SetFontAndSize(_page, font, fontSize)
@@ -408,13 +407,68 @@ public final class DrawingContext {
         }
     }
     
-    /// Gets the width of the text in current fontsize, character spacing and word spacing.
+    /// Gets the width of the text in the current fontsize, character spacing and word spacing. If the text
+    /// is multiline, returns the width of the longest line.
     ///
     /// - parameter text:  The text to get width of.
     ///
     /// - returns: The width of the text in current fontsize, character spacing and word spacing.
     public func textWidth(for text: String) -> Float {
-        return HPDF_Page_TextWidth(_page, text)
+        
+        let lines = text.components(separatedBy: .newlines)
+        
+        return lines.map { HPDF_Page_TextWidth(_page, $0) }.max()!
+    }
+    
+    /// Gets the bounding box of the text in the current font size and leading. Text can be multiline.
+    ///
+    /// - parameter text:     The text to get the bounding box of.
+    /// - parameter position: The assumed position of the text.
+    ///
+    /// - returns: The bounding box of the text.
+    public func boundingBox(for text: String, atPosition position: Point) -> Rectangle {
+        
+        let textWidth = self.textWidth(for: text)
+        
+        let numberOfLines = text.components(separatedBy: .newlines).count
+        
+        return Rectangle(x: position.x,
+                         y: position.y + fontDescent - textLeading * Float(numberOfLines - 1),
+                         width: textWidth,
+                         height: fontAscent - fontDescent + textLeading * Float(numberOfLines - 1))
+    }
+    
+    /// The vertical ascent of the current font in the current font size.
+    public var fontAscent: Float {
+        
+        let fontHandle = HPDF_GetFont(_documentHandle, font.name, encoding.name)
+        
+        return Float(HPDF_Font_GetAscent(fontHandle)) * fontSize / 1000
+    }
+    
+    /// The vertical descent of the current font in the current font size. This value is negative.
+    public var fontDescent: Float {
+        
+        let fontHandle = HPDF_GetFont(_documentHandle, font.name, encoding.name)
+        
+        return Float(HPDF_Font_GetDescent(fontHandle)) * fontSize / 1000
+    }
+    
+    /// The height of lowercase letters reach based on height of lowercase x in the current font and font size;
+    /// does not include ascenders or descenders.
+    public var fontXHeight: Float {
+        
+        let fontHandle = HPDF_GetFont(_documentHandle, font.name, encoding.name)
+        
+        return Float(HPDF_Font_GetXHeight(fontHandle)) * fontSize / 1000
+    }
+    
+    /// The height of a capital letter in the current font and font size measured from the baseline.
+    public var fontCapHeight: Float {
+        
+        let fontHandle = HPDF_GetFont(_documentHandle, font.name, encoding.name)
+        
+        return Float(HPDF_Font_GetCapHeight(fontHandle)) * fontSize / 1000
     }
     
     /// Text leading (line spacing) for text showing. Default value is 11.
