@@ -2,7 +2,6 @@
 //  DrawingContext.swift
 //  SwiftyHaru
 //
-//  Created by Sergej Jaskiewicz on 02.10.16.
 //
 //
 
