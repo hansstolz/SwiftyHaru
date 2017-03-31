@@ -1,0 +1,16 @@
+framework module CLibHaru {
+    umbrella header "/usr/local/Cellar/libharu/2.3.0/include/hpdf.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_3dmeasure.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_conf.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_destination.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_encryptdict.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_exdata.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_annotation.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_info.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_namedict.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_page_label.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_u3d.h"
+    header "/usr/local/Cellar/libharu/2.3.0/include/hpdf_utils.h"
+    link framework "CLibHaru"
+    export *
+   }
